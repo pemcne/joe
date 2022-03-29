@@ -233,8 +233,39 @@ func (b *Bot) Run() error {
 // If multiple matching patterns are registered, only the first registered
 // handler is executed.
 func (b *Bot) Respond(msg string, fun func(Message) error) {
-	expr := "^" + msg + "$"
+	expr := fmt.Sprintf("^%s %s$", b.Name, msg)
 	b.RespondRegex(expr, fun)
+}
+
+func (b *Bot) Hear(expr string, fun func(Message) error) {
+	if expr == "" {
+		return
+	}
+
+	regex, err := regexp.Compile(expr)
+	if err != nil {
+		caller := firstExternalCaller()
+		err = fmt.Errorf("%s: %w", caller, err)
+		b.Brain.registrationErrs = append(b.Brain.registrationErrs, err)
+		return
+	}
+	b.Brain.RegisterHandler(func(ctx context.Context, evt ReceiveMessageEvent) error {
+		matches := regex.FindStringSubmatch(evt.Text)
+		if len(matches) == 0 {
+			return nil
+		}
+
+		return fun(Message{
+			Context:  ctx,
+			ID:       evt.ID,
+			Text:     evt.Text,
+			AuthorID: evt.AuthorID,
+			Data:     evt.Data,
+			Channel:  evt.Channel,
+			Matches:  matches[1:],
+			adapter:  b.Adapter,
+		})
+	})
 }
 
 // RespondRegex is like Bot.Respond(…) but gives a little more control over the
