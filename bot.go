@@ -233,7 +233,7 @@ func (b *Bot) Run() error {
 // If multiple matching patterns are registered, only the first registered
 // handler is executed.
 func (b *Bot) Respond(msg string, fun func(Message) error) {
-	expr := fmt.Sprintf("^%s %s$", b.Name, msg)
+	expr := fmt.Sprintf("%s %s$", b.Name, msg)
 	b.RespondRegex(expr, fun)
 }
 
